@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>화살표 오브제 프롬프트 생성기</title>
+<style>
+  :root{
+    --ink:#111111;
+    --paper:#f5f5f3;
+    --line:#d9d9d6;
+    --accent:#1d3df0;
+    --muted:#7a7a76;
+    --white:#ffffff;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Pretendard','Apple SD Gothic Neo','Segoe UI',sans-serif;
+    padding:40px 20px 80px;
+  }
+  .wrap{max-width:760px;margin:0 auto;}
+  h1{font-size:26px;font-weight:800;margin:0 0 6px;letter-spacing:-0.02em;}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 32px;}
+  .tabs{display:flex;gap:8px;margin-bottom:24px;}
+  .tab{
+    flex:1;padding:12px 14px;background:var(--white);border:1px solid var(--line);
+    border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;text-align:center;
+    color:var(--muted);transition:all .15s ease;
+  }
+  .tab.active{background:var(--ink);color:var(--white);border-color:var(--ink);}
+  .panel{display:none;}
+  .panel.active{display:block;}
+  .card{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:28px;margin-bottom:20px;}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+  .row:last-child{margin-bottom:0;}
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .field.full{grid-column:1/-1;}
+  label{font-size:12px;font-weight:700;color:var(--muted);}
+  select, input[type=text]{
+    appearance:none;border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+    font-size:14px;font-family:inherit;background:var(--paper);color:var(--ink);width:100%;
+  }
+  select:focus, input:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .output-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .output-label span{font-size:12px;font-weight:700;color:var(--muted);}
+  button.copy{
+    background:var(--ink);color:var(--white);border:none;border-radius:8px;padding:8px 14px;
+    font-size:12px;font-weight:700;cursor:pointer;
+  }
+  button.copy:active{transform:scale(0.97);}
+  button.copy.copied{background:var(--accent);}
+  pre{
+    white-space:pre-wrap;word-break:break-word;background:var(--ink);color:#e9e9e6;
+    border-radius:10px;padding:18px;font-size:12.5px;line-height:1.6;
+    font-family:'SF Mono','Consolas',monospace;margin:0;
+  }
+  .note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6;}
+
+  /* color picker row */
+  .colorrow{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  input[type=color]{
+    -webkit-appearance:none;appearance:none;width:38px;height:38px;border:1px solid var(--line);
+    border-radius:9px;padding:0;cursor:pointer;flex-shrink:0;background:none;
+  }
+  input[type=color]::-webkit-color-swatch-wrapper{padding:3px;}
+  input[type=color]::-webkit-color-swatch{border:none;border-radius:6px;}
+  .hexinput{width:100px !important;flex-shrink:0;font-family:'SF Mono','Consolas',monospace;text-transform:uppercase;}
+  .hexinput-full{flex:1;font-family:'SF Mono','Consolas',monospace;text-transform:uppercase;}
+  .custom-material{margin-top:6px;}
+  .colorname{flex:1;}
+
+  .slider-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-top:2px;
+  }
+  input[type=range]{
+    flex:1;
+    accent-color: var(--accent);
+    height:4px;
+  }
+  .slider-val{
+    font-size:12px;
+    font-weight:700;
+    color:var(--ink);
+    min-width:38px;
+    text-align:right;
+  }
+  .light-dial-wrap{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    margin-top:6px;
+  }
+  .light-dial{
+    position:relative;
+    width:90px;
+    height:90px;
+    border-radius:50%;
+    background:radial-gradient(circle at center, #2a2a28 0%, #111111 70%);
+    border:1px solid var(--line);
+    flex-shrink:0;
+    cursor:pointer;
+    touch-action:none;
+  }
+  .light-dial::after{
+    content:'';
+    position:absolute;
+    width:18px;height:18px;
+    border-radius:50%;
+    border:1px dashed #555;
+    top:50%;left:50%;
+    transform:translate(-50%,-50%);
+  }
+  .light-dot{
+    position:absolute;
+    width:14px;height:14px;
+    border-radius:50%;
+    background:#ffd84d;
+    box-shadow:0 0 8px 2px rgba(255,216,77,.7);
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+  }
+  .light-readout{
+    font-size:12px;
+    color:var(--muted);
+    line-height:1.7;
+  }
+  .light-readout b{color:var(--ink);}
+  .view-dial{
+    position:relative;
+    width:90px;
+    height:90px;
+    border-radius:50%;
+    background:radial-gradient(circle at center, #eef2ff 0%, #dbe2fb 70%);
+    border:1px solid var(--line);
+    flex-shrink:0;
+    cursor:pointer;
+    touch-action:none;
+  }
+  .view-dial::after{
+    content:'탑뷰';
+    position:absolute;
+    width:30px;height:30px;
+    border-radius:50%;
+    border:1px dashed #9aa6e8;
+    top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    font-size:8px;
+    color:#5a67d8;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    line-height:1.1;
+  }
+  .view-dot{
+    position:absolute;
+    width:14px;height:14px;
+    border-radius:50%;
+    background:var(--accent);
+    box-shadow:0 0 0 3px #fff, 0 0 0 4px var(--accent);
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+  }
+  .dial-axis-label{
+    position:absolute;
+    font-size:9px;
+    font-weight:700;
+    color:#7c86c9;
+    pointer-events:none;
+  }
+  .dial-wrap-relative{position:relative;flex-shrink:0;}
+  .seg-control{
+    display:flex;
+    width:100%;
+    border:1px solid var(--line);
+    border-radius:9px;
+    overflow:hidden;
+    margin-top:8px;
+  }
+  .seg-btn{
+    flex:1;
+    padding:8px 14px;
+    font-size:12.5px;
+    font-weight:700;
+    background:var(--white);
+    color:var(--muted);
+    cursor:pointer;
+    border:none;
+    border-right:1px solid var(--line);
+    text-align:center;
+  }
+  .seg-btn:last-child{border-right:none;}
+  .seg-btn.active{
+    background:var(--ink);
+    color:var(--white);
+  }
+  .toggle-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-top:10px;
+  }
+  .toggle{
+    position:relative;
+    width:42px;height:24px;
+    background:var(--line);
+    border-radius:999px;
+    cursor:pointer;
+    flex-shrink:0;
+    transition:background .15s ease;
+  }
+  .toggle.on{background:var(--accent);}
+  .toggle::after{
+    content:'';
+    position:absolute;
+    width:18px;height:18px;
+    background:var(--white);
+    border-radius:50%;
+    top:3px;left:3px;
+    transition:transform .15s ease;
+  }
+  .toggle.on::after{transform:translateX(18px);}
+  .toggle-label{font-size:13px;font-weight:600;color:var(--ink);}
+  .ref-banner{
+    background:#fff7e6;
+    border:1px solid #f0d28a;
+    color:#7a5a00;
+    font-size:12.5px;
+    line-height:1.6;
+    padding:12px 14px;
+    border-radius:10px;
+    margin-bottom:16px;
+  }
+  .launch-btn{
+    display:block;text-align:center;margin-top:18px;background:var(--accent);color:var(--white);
+    text-decoration:none;font-weight:800;font-size:14px;padding:14px 18px;border-radius:10px;
+    transition:opacity .15s ease;
+  }
+  .launch-btn:hover{opacity:.88;}
+
+  .section-title{
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:.04em;
+    color:#a8a8a3;
+    text-transform:uppercase;
+    margin:0 0 12px;
+  }
+  .section{margin-bottom:26px;}
+  .section:last-child{margin-bottom:0;}
+  .divider{height:1px;background:var(--line);margin:24px 0;border:none;}
+  .readout-chip{
+    display:inline-block;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:6px 10px;
+    font-size:11.5px;
+    color:var(--muted);
+    line-height:1.5;
+    margin-top:2px;
+  }
+  .readout-chip b{color:var(--ink); font-weight:700;}
+  .dial-col{display:flex; flex-direction:column; gap:8px;}
+
+  .view-preview-wrap{
+    width:64px;height:64px;
+    perspective:280px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+  .view-preview{
+    width:44px;height:44px;
+    background:linear-gradient(135deg,#3a52ff,#1d3df0);
+    border-radius:10px;
+    transform-style:preserve-3d;
+    position:relative;
+    box-shadow:0 6px 14px rgba(29,61,240,.25);
+  }
+  .view-preview-marker{
+    position:absolute;
+    top:5px;left:5px;
+    width:7px;height:7px;
+    border-radius:50%;
+    background:#fff;
+  }
+  .view-preview-label{
+    position:absolute;
+    bottom:-18px;
+    left:0; right:0;
+    text-align:center;
+    font-size:9px;
+    color:var(--muted);
+    font-weight:700;
+  }
+  .view-ground-line{
+    position:absolute;
+    bottom:-6px;
+    left:50%;
+    transform:translateX(-50%);
+    width:54px;height:3px;
+    border-radius:2px;
+    background:#d9d9d6;
+    opacity:0;
+    transition:opacity .15s ease;
+  }
+  .view-ground-line.show{opacity:1; background:#9aa6e8;}
+
+  .view-grid.grounded .ground-plane{opacity:1;}
+  .view-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:8px;
+    margin-top:6px;
+  }
+  .view-card{
+    background:var(--paper);
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    padding:14px 6px;
+    cursor:pointer;
+    text-align:center;
+    transition:border-color .12s ease, background .12s ease;
+  }
+  .view-card:hover{border-color:#b9c0ff;}
+  .view-card.selected{
+    border-color:var(--accent);
+    background:#eef0ff;
+  }
+  .view-card-icon-wrap{
+    width:100%;
+    height:48px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .cube-rot{
+    width:26px;height:26px;
+    position:relative;
+    transform-style:preserve-3d;
+  }
+  .cube-face{
+    position:absolute;
+    width:26px;height:26px;
+    border-radius:3px;
+  }
+  .cube-top{ background:#7c8bff; transform:rotateX(90deg) translateZ(13px); }
+  .cube-front{ background:#1d3df0; transform:translateZ(13px); }
+  .cube-right{ background:#13278f; transform:rotateY(90deg) translateZ(13px); }
+  .ground-plane{ opacity:0; transition:opacity .12s ease;
+    position:absolute;
+    bottom:4px; left:50%;
+    transform:translateX(-50%);
+    width:40px; height:4px;
+    border-radius:2px;
+    background:#d7dcff;
+  }
+  .view-card-label{
+    font-size:12px;
+    font-weight:700;
+    color:var(--muted);
+    line-height:1;
+  }
+  .view-card.selected .view-card-label{color:var(--accent);}
+  .seg-control.thickness-seg .seg-btn{flex:1; text-align:center;}
+  .seg-control.thickness-seg{display:flex; width:100%;}
+  .custom-angle-input{margin-top:8px;}
+
+  .label-row{
+    display:flex;
+    align-items:center;
+    gap:5px;
+  }
+  .info-btn{
+    width:15px;height:15px;
+    border-radius:50%;
+    background:var(--line);
+    color:var(--white);
+    border:none;
+    font-size:10px;
+    font-weight:800;
+    line-height:15px;
+    text-align:center;
+    cursor:pointer;
+    padding:0;
+    flex-shrink:0;
+  }
+  .info-btn:hover{background:var(--accent);}
+  .material-popover{
+    display:none;
+    grid-template-columns:repeat(3, 1fr);
+    gap:10px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px;
+    margin-top:8px;
+  }
+  .material-popover.show{display:grid;}
+  .mat-swatch-item{display:flex; flex-direction:column; align-items:center; gap:4px;}
+  .mat-swatch{
+    width:46px;height:46px;
+    border-radius:50%;
+    position:relative;
+    box-shadow:
+      inset -6px -6px 10px rgba(0,0,0,.35),
+      inset 3px 4px 6px rgba(255,255,255,.5),
+      0 2px 4px rgba(0,0,0,.15);
+  }
+  .mat-chrome{
+    background:
+      radial-gradient(circle at 30% 24%, #ffffff 0%, rgba(255,255,255,0) 16%),
+      linear-gradient(115deg, #fafafa 0%, #4d4d4d 20%, #fdfdfd 36%, #2a2a2a 52%, #f0f0f0 68%, #6e6e6e 100%);
+  }
+  .mat-brushed{
+    background:
+      radial-gradient(ellipse 60% 14% at 38% 30%, rgba(255,255,255,.85) 0%, rgba(255,255,255,0) 100%),
+      repeating-linear-gradient(98deg, #cfcfcf 0 1px, #b4b4b4 1px 2px),
+      radial-gradient(circle at 38% 35%, #d8d8d8 0%, #9a9a9a 60%, #5c5c5c 100%);
+    background-blend-mode:normal, soft-light, normal;
+  }
+  .mat-plastic{
+    background:
+      radial-gradient(circle at 30% 26%, #ffffff 0%, rgba(255,255,255,0) 14%),
+      radial-gradient(circle at 35% 32%, #6b85ff 0%, var(--accent) 45%, #0d1f9e 100%);
+  }
+  .mat-ceramic{
+    background:
+      radial-gradient(circle at 34% 30%, #ffffff 0%, rgba(255,255,255,0) 22%),
+      radial-gradient(circle at 40% 38%, #f0f0ee 0%, #d4d4d0 60%, #b6b6b1 100%);
+    box-shadow:
+      inset -5px -5px 8px rgba(0,0,0,.18),
+      inset 2px 3px 5px rgba(255,255,255,.6),
+      0 2px 4px rgba(0,0,0,.12);
+  }
+  .mat-glass{
+    background:
+      radial-gradient(circle at 30% 26%, rgba(255,255,255,.95) 0%, rgba(255,255,255,0) 20%),
+      radial-gradient(circle at 60% 65%, rgba(180,195,235,.55) 0%, rgba(225,230,250,.25) 60%, rgba(255,255,255,.15) 100%);
+    box-shadow:
+      inset -4px -4px 8px rgba(120,140,210,.25),
+      inset 2px 3px 5px rgba(255,255,255,.7),
+      0 2px 4px rgba(0,0,0,.08);
+  }
+  .mat-enamel{
+    background:
+      radial-gradient(circle at 30% 26%, #ffffff 0%, rgba(255,255,255,0) 14%),
+      radial-gradient(circle at 35% 32%, #4a63ff 0%, #1d3df0 40%, #061266 100%);
+  }
+  .mat-swatch-label{font-size:10px; color:var(--muted); text-align:center; line-height:1.3;}
+  .warn-banner{
+    background:#fff0ee;
+    border:1.5px solid #f3a89a;
+    color:#a3260f;
+    font-size:13px;
+    font-weight:600;
+    line-height:1.7;
+    padding:14px 16px;
+    border-radius:10px;
+    margin-bottom:20px;
+  }
+
+  .mat-hint{
+    display:block;
+    margin-top:8px;
+    padding:8px 10px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:8px;
+  }
+  .mat-hint-sphere{
+    width:28px;height:28px;
+    border-radius:50%;
+    flex-shrink:0;
+  }
+  .mat-hint-text{
+    font-size:11.5px;
+    color:var(--muted);
+    line-height:1.4;
+  }
+  .mat-hint-text b{color:var(--ink); font-weight:700;}
+  .mat-tags{
+    display:flex;
+    gap:4px;
+    margin-top:3px;
+    flex-wrap:wrap;
+  }
+  .mat-tag{
+    font-size:10px;
+    font-weight:700;
+    padding:2px 7px;
+    border-radius:99px;
+    background:#e8eafe;
+    color:var(--accent);
+  }
+
+  .mode-tabs{
+    display:flex;
+    gap:8px;
+    margin-bottom:20px;
+  }
+  .mode-tab{
+    flex:1;
+    padding:10px 12px;
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    cursor:pointer;
+    font-size:13px;
+    font-weight:700;
+    text-align:center;
+    color:var(--muted);
+    background:var(--white);
+    transition:all .15s;
+  }
+  .mode-tab.active{
+    background:var(--ink);
+    color:var(--white);
+    border-color:var(--ink);
+  }
+  .mode-panel{display:none;}
+  .mode-panel.active{display:block;}
+  .master-note{
+    background:#f0f2ff;
+    border:1px solid #c7ceff;
+    border-radius:10px;
+    padding:12px 14px;
+    font-size:12.5px;
+    color:#3a4ad4;
+    line-height:1.6;
+    margin-bottom:20px;
+  }
+  .sample-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(120px, 1fr));
+    gap:10px;
+    margin-bottom:4px;
+  }
+  .sample-card{
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    overflow:hidden;
+    background:var(--white);
+    cursor:pointer;
+    transition:border-color .12s;
+  }
+  .sample-card:hover{border-color:var(--accent);}
+  .sample-card img{
+    width:100%;
+    aspect-ratio:1;
+    object-fit:cover;
+    display:block;
+    background:#f0f0ee;
+  }
+  .sample-card-footer{
+    padding:6px 8px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:4px;
+  }
+  .sample-card-label{
+    font-size:10px;
+    font-weight:700;
+    color:var(--muted);
+    line-height:1.3;
+    flex:1;
+  }
+  .sample-dl-btn{
+    background:none;
+    border:none;
+    cursor:pointer;
+    color:var(--muted);
+    padding:4px;
+    flex-shrink:0;
+    border-radius:6px;
+    display:flex;
+    align-items:center;
+    transition:color .12s, background .12s;
+  }
+  .sample-dl-btn:hover{
+    color:var(--accent);
+    background:#eef0ff;
+  }
+  .sample-empty{
+    border:1.5px dashed var(--line);
+    border-radius:10px;
+    aspect-ratio:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:11px;
+    color:var(--muted);
+    text-align:center;
+    padding:8px;
+    line-height:1.4;
+  }
+  .badge{
+    display:inline-block;background:#eef0ff;color:var(--accent);font-size:11px;font-weight:700;
+    padding:3px 8px;border-radius:6px;margin-bottom:10px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>화살표 오브제 프롬프트 생성기</h1>
+  <p class="sub">옵션만 선택하면 프롬프트가 자동으로 완성됩니다. 컬러는 피커로 고르거나 HEX로 직접 입력하세요.</p>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="solo">화살표 단독 생성</div>
+    <div class="tab" data-tab="composite">기존 오브제 + 화살표 합성</div>
+  </div>
+
+  <!-- TAB 1: 화살표 단독 -->
+  <div class="panel active" id="solo">
+    <div class="card">
+
+      <div class="mode-tabs">
+        <div class="mode-tab active" data-mode="with-sample">📎 마스터 샘플 있음</div>
+        <div class="mode-tab" data-mode="no-sample">✏️ 샘플 없이 생성</div>
+      </div>
+
+      <!-- 마스터 샘플 있음 -->
+      <div class="mode-panel active" id="mode-with-sample">
+        <div class="master-note">
+          ① 아래에서 마스터 샘플을 다운로드 → ② AI 스튜디오에 업로드 → ③ 아래 프롬프트 붙여넣기
+        </div>
+        <div id="sample-grid" class="sample-grid"></div>
+        <div class="row" style="margin-top:16px;">
+          <div class="field">
+            <label>컬러</label>
+            <div class="colorrow">
+              <input type="color" id="ws_picker" value="#1d3df0">
+              <input type="text" id="ws_hex" class="hexinput-full" value="#1D3DF0" placeholder="#1D3DF0">
+            </div>
+          </div>
+          <div class="field">
+            <label>배경색</label>
+            <div class="colorrow">
+              <input type="color" id="ws_bg_picker" value="#ffffff">
+              <input type="text" id="ws_bg" class="hexinput-full" value="#FFFFFF" placeholder="#FFFFFF">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 샘플 없이 생성 -->
+      <div class="mode-panel" id="mode-no-sample">
+      <div class="section">
+        <p class="section-title">형태</p>
+        <div class="row">
+          <div class="field">
+            <label>화살표 타입</label>
+            <select id="s_type">
+              <option value="circular bidirectional">A. 양방향 순환형</option>
+              <option value="circular unidirectional">B. 단방향 순환형</option>
+              <option value="infinity-loop">C. 무한반복형</option>
+              <option value="straight, diagonally upward">D. 직선 진행형</option>
+              <option value="single-direction (downward)">E. 단순 하향형</option>
+              <option value="single-direction (upward)">E. 단순 상향형</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>재질</label>
+            <select id="s_material">
+              <option value="metallic chrome">고광택 메탈</option>
+              <option value="glossy plastic">유광 플라스틱</option>
+              <option value="matte ceramic">무광 세라믹</option>
+              <option value="brushed metal">결 메탈</option>
+              <option value="frosted glass">반투명 유리</option>
+              <option value="glossy enamel paint">유광 에나멜</option>
+              <option value="__custom__">직접 입력...</option>
+            </select>
+            <input type="text" id="s_material_custom" class="custom-material" placeholder="예: brushed gold, soft rubber" style="display:none;">
+            <div class="mat-hint" id="s_mat_hint">
+              <div class="mat-hint-text">
+                <b>고광택 메탈</b> — 거울처럼 주변을 반사하는 고광택 금속
+                <div class="mat-tags"><span class="mat-tag">강한 반사</span><span class="mat-tag">광택</span><span class="mat-tag">하이라이트 선명</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="field full" style="margin-top:16px;">
+          <label>화살표 두께</label>
+          <div class="readout-chip" style="display:inline-block;">브랜드 공통 두께 · 12% 고정</div>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="section">
+        <p class="section-title">시점</p>
+        <div class="field">
+          <label>시점 / 배치</label>
+          <div class="seg-control" id="s_ground_seg" style="margin-bottom:10px;">
+            <button type="button" class="seg-btn active" data-grounded="false">부유형</button>
+              <button type="button" class="seg-btn" data-grounded="true">접지형</button>
+            </div>
+            <div class="view-grid" id="s_view_grid" style="grid-template-columns:repeat(5, 1fr);">
+              <div class="view-card selected" data-value="front">
+                <div class="view-card-label">정면</div>
+              </div>
+              <div class="view-card" data-value="left45">
+                <div class="view-card-label">45° 좌</div>
+              </div>
+              <div class="view-card" data-value="right45">
+                <div class="view-card-label">45° 우</div>
+              </div>
+              <div class="view-card" data-value="top">
+                <div class="view-card-label">탑뷰</div>
+              </div>
+              <div class="view-card" data-value="__custom__">
+                <div class="view-card-label">직접 입력</div>
+              </div>
+            </div>
+            <input type="text" id="s_view_custom" class="custom-angle-input" placeholder="예: 30도 정도 위에서, 살짝 비스듬히" style="display:none;">
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="section">
+        <p class="section-title">색상 &amp; 배경</p>
+        <div class="row">
+          <div class="field">
+            <label>컬러</label>
+            <div class="colorrow">
+              <input type="color" id="s_picker" value="#1d3df0">
+              <input type="text" id="s_hex" class="hexinput-full" value="#1D3DF0" placeholder="#1D3DF0">
+            </div>
+          </div>
+          <div class="field">
+            <label>배경색</label>
+            <div class="colorrow">
+              <input type="color" id="s_bg_picker" value="#ffffff">
+              <input type="text" id="s_bg" class="hexinput-full" value="#FFFFFF" placeholder="#FFFFFF">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      </div><!-- /mode-no-sample -->
+    </div>
+  </div>
+
+  <!-- TAB 2: 합성 -->
+  <div class="panel" id="composite">
+    <div class="card">
+      <div class="warn-banner">
+        ⚠️ 이 탭은 반드시 오브제 이미지를 먼저 업로드해야 작동해요.<br>
+        이미지를 첨부하지 않고 아래 프롬프트만 입력하면, AI가 참고할 게 없어서 완전히 엉뚱한 오브제를 임의로 만들어냅니다.<br>
+        순서: ① AI 스튜디오에 오브제 이미지 업로드 → ② 아래 프롬프트 복사해서 이어서 입력
+      </div>
+
+      <div class="section">
+        <p class="section-title">기존 오브제</p>
+        <div class="field full">
+          <label>고정할 기존 오브제 설명 (텍스트/형태 보존 대상)</label>
+          <input type="text" id="c_object" value="" placeholder="업로드한 이미지를 보고 작성하세요. 예: coin's shape, embossed text, silver color, and proportions">
+          <p class="note" style="margin-top:6px;">⚠️ 이 칸은 업로드한 실제 이미지를 보고 직접 채우세요. 비워두면 프롬프트 의미가 약해질 수 있어요.</p>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="section">
+        <p class="section-title">화살표 형태</p>
+        <div class="row">
+          <div class="field">
+            <label>화살표 타입</label>
+            <select id="c_type">
+              <option value="circular bidirectional">A. 양방향 순환형</option>
+              <option value="circular unidirectional">B. 단방향 순환형</option>
+              <option value="infinity-loop">C. 무한반복형</option>
+              <option value="straight, diagonally upward">D. 직선 진행형</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>화살표 재질</label>
+            <select id="c_material">
+              <option value="metallic chrome">고광택 메탈</option>
+              <option value="glossy plastic">유광 플라스틱</option>
+              <option value="matte ceramic">무광 세라믹</option>
+              <option value="brushed metal">결 메탈</option>
+              <option value="frosted glass">반투명 유리</option>
+              <option value="glossy enamel paint">유광 에나멜</option>
+              <option value="__custom__">직접 입력...</option>
+            </select>
+            <input type="text" id="c_material_custom" class="custom-material" placeholder="예: brushed gold, soft rubber" style="display:none;">
+            <div class="mat-hint" id="c_mat_hint">
+              <div class="mat-hint-text">
+                <b>고광택 메탈</b> — 거울처럼 주변을 반사하는 고광택 금속
+                <div class="mat-tags"><span class="mat-tag">강한 반사</span><span class="mat-tag">광택</span><span class="mat-tag">하이라이트 선명</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="field full" style="margin-top:16px;">
+          <label>화살표 두께 (기존 오브제 스타일에 맞춰 조절)</label>
+          <div class="seg-control thickness-seg" id="c_thickness_seg">
+            <button type="button" class="seg-btn" data-value="9">얇게</button>
+            <button type="button" class="seg-btn active" data-value="12">보통</button>
+            <button type="button" class="seg-btn" data-value="17">두껍게</button>
+          </div>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="section">
+        <p class="section-title">시점</p>
+
+        <div class="field" style="margin-bottom:0;">
+          <label>시점 / 배치</label>
+          <div class="toggle-row" style="margin-top:6px;margin-bottom:12px;">
+            <div class="toggle" id="c_view_override"></div>
+            <span class="toggle-label">원본 시점 대신 직접 지정하기</span>
+          </div>
+          <div id="c_view_controls" style="opacity:.35; pointer-events:none;">
+            <div class="seg-control" id="c_ground_seg" style="margin-bottom:10px;">
+              <button type="button" class="seg-btn active" data-grounded="false">부유형</button>
+              <button type="button" class="seg-btn" data-grounded="true">접지형</button>
+            </div>
+            <div class="view-grid" id="c_view_grid" style="grid-template-columns:repeat(5, 1fr);">
+              <div class="view-card selected" data-value="front">
+                <div class="view-card-label">정면</div>
+              </div>
+              <div class="view-card" data-value="left45">
+                <div class="view-card-label">45° 좌</div>
+              </div>
+              <div class="view-card" data-value="right45">
+                <div class="view-card-label">45° 우</div>
+              </div>
+              <div class="view-card" data-value="top">
+                <div class="view-card-label">탑뷰</div>
+              </div>
+              <div class="view-card" data-value="__custom__">
+                <div class="view-card-label">직접 입력</div>
+              </div>
+            </div>
+            <input type="text" id="c_view_custom" class="custom-angle-input" placeholder="예: 30도 정도 위에서, 살짝 비스듬히" style="display:none;">
+          </div>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="section">
+        <p class="section-title">색상 &amp; 배경</p>
+        <div class="row">
+          <div class="field">
+            <label>화살표 컬러</label>
+            <div class="colorrow">
+              <input type="color" id="c_picker" value="#1d3df0">
+              <input type="text" id="c_hex" class="hexinput-full" value="#1D3DF0" placeholder="#1D3DF0">
+            </div>
+          </div>
+          <div class="field">
+            <label>배경색</label>
+            <div class="colorrow">
+              <input type="color" id="c_bg_picker" value="#9b9b9b">
+              <input type="text" id="c_bg" class="hexinput-full" value="#9B9B9B" placeholder="#9B9B9B">
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="ref-banner">
+    📎 프롬프트만으론 두께·광원·그림자가 매번 미세하게 달라질 수 있어요.
+    가능하면 타입별 기준 샘플 이미지를 함께 첨부해서 "이 이미지 스타일을 따라가줘"라고 요청하면 일관성이 훨씬 좋아집니다.
+  </div>
+
+  <div class="output-label">
+    <span>완성된 프롬프트</span>
+    <button class="copy" id="copyBtn">복사하기</button>
+  </div>
+  <pre id="output"></pre>
+  <p class="note" id="note"></p>
+
+  <a href="https://ai-studio.one.musinsa.com/playground/image-generator" target="_blank" rel="noopener" class="launch-btn">
+    무신사 AI 스튜디오에서 바로 생성하기 →
+  </a>
+</div>
+
+<script>
+const tabs = document.querySelectorAll('.tab');
+const panels = document.querySelectorAll('.panel');
+let current = 'solo';
+
+tabs.forEach(t=>{
+  t.addEventListener('click', ()=>{
+    tabs.forEach(x=>x.classList.remove('active'));
+    panels.forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    current = t.dataset.tab;
+    document.getElementById(current).classList.add('active');
+    render();
+  });
+});
+
+function getCustomizable(selectId, customId, fallback){
+  const sel = document.getElementById(selectId);
+  if(sel.value === '__custom__'){
+    return document.getElementById(customId).value.trim() || fallback;
+  }
+  return sel.value;
+}
+
+function buildSolo(){
+  const type = document.getElementById('s_type').value;
+  const material = getCustomizable('s_material','s_material_custom','metallic chrome');
+  const view = viewSel.s.angle === '__custom__'
+    ? (document.getElementById('s_view_custom').value.trim() || 'slightly angled front view')
+    : VIEW_PRESETS[getViewKey('s')];
+  const color = document.getElementById('s_hex').value || '#111111';
+  const bg = document.getElementById('s_bg').value || '#FFFFFF';
+
+  const typeLabels = {
+    'circular bidirectional': 'circular bidirectional arrow (two arrowheads)',
+    'circular unidirectional': 'circular unidirectional arrow (one arrowhead, open ring)',
+    'infinity-loop': 'infinity loop arrow',
+    'straight, diagonally upward': 'straight diagonal arrow pointing upward',
+    'single-direction (downward)': 'single downward arrow',
+    'single-direction (upward)': 'single upward arrow',
+  };
+  const typeLabel = typeLabels[type] || type;
+
+  let shapeNote = '';
+  if(type === 'circular bidirectional')
+    shapeNote = '- two arrowheads meeting near the top with a small gap between them\n';
+  else if(type === 'circular unidirectional')
+    shapeNote = '- one arrowhead visible in front, tail passes behind and is hidden\n';
+
+  let txt = `Create a clean commercial 3D ${typeLabel}.\n`;
+  txt += shapeNote;
+  txt += `- flat beveled ribbon band cross-section, not a rounded tube\n`;
+  txt += `- flat angular chevron arrowhead, not a rounded cone tip\n`;
+  txt += `- ${material} surface\n`;
+  txt += `- color: ${color}\n`;
+  txt += `- soft studio lighting from the upper-left, soft drop shadow\n`;
+  txt += `- ${view}\n`;
+  txt += `- centered on a plain ${bg} background\n`;
+  txt += `- no text, no watermark\n`;
+  txt += `\nNegative prompt: rounded tube, puffy, balloon-like, rounded cone tip, low poly, watermark`;
+  return txt;
+}
+
+function buildComposite(){
+  const object = document.getElementById('c_object').value || "the object's shape, color, text, and proportions";
+  const type = document.getElementById('c_type').value;
+  const material = getCustomizable('c_material','c_material_custom','metallic chrome');
+  const thickness = thicknessSel.c;
+  const view = !viewSel.c.override ? '' :
+    (viewSel.c.angle === '__custom__'
+      ? (document.getElementById('c_view_custom').value.trim() || '')
+      : VIEW_PRESETS[getViewKey('c')]);
+  const color = document.getElementById('c_hex').value || '#1D3DF0';
+  const bg = document.getElementById('c_bg').value || '#9B9B9B';
+
+  const wrapNote = type === 'circular unidirectional'
+    ? '- one arrowhead visible in front, tail passes behind the object and is hidden\n'
+    : type === 'circular bidirectional'
+    ? '- two arrowheads meeting near the top with a small gap between them\n'
+    : '';
+
+  let txt = `Using the uploaded image as the reference object — keep ${object} exactly as-is — add a 3D ${type} arrow wrapping around it.\n`;
+  txt += wrapNote;
+  txt += `- flat beveled ribbon band cross-section, not a rounded tube\n`;
+  txt += `- flat angular chevron arrowhead, not a rounded cone tip\n`;
+  txt += `- ${material} surface\n`;
+  txt += `- color: ${color}\n`;
+  txt += `- match the lighting and shadow of the original object\n`;
+  txt += view ? `- perspective: ${view}\n` : `- match the camera angle of the original object exactly\n`;
+  txt += `- background: ${bg}\n`;
+  txt += `- do not alter or redraw the original object — only add the arrow\n`;
+  txt += `\nNegative prompt: rounded tube, puffy, balloon-like, rounded cone tip, altering original object, low poly`;
+  return txt;
+}
+
+
+// ---- 마스터 샘플 데이터 ----
+const MASTER_SAMPLES = {
+  'circular unidirectional': {
+    label: 'B. 단방향 순환형',
+    thumb: 'data:image/webp;base64,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',
+    full:  'data:image/webp;base64,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',
+    filename: 'master_B_단방향순환형.png',
+  },
+  // 나머지 타입은 추후 추가
+};
+
+// ---- 마스터 샘플 그리드 렌더 ----
+const TYPE_ORDER = [
+  'circular bidirectional',
+  'circular unidirectional',
+  'infinity-loop',
+  'straight, diagonally upward',
+  'single-direction (upward)',
+];
+const TYPE_LABELS = {
+  'circular bidirectional': 'A. 양방향 순환형',
+  'circular unidirectional': 'B. 단방향 순환형',
+  'infinity-loop': 'C. 무한반복형',
+  'straight, diagonally upward': 'D. 직선 진행형',
+  'single-direction (upward)': 'E. 단순 방향형',
+};
+
+function renderSampleGrid(){
+  const grid = document.getElementById('sample-grid');
+  if(!grid) return;
+  grid.innerHTML = '';
+  TYPE_ORDER.forEach(typeKey => {
+    const label = TYPE_LABELS[typeKey];
+    const sample = MASTER_SAMPLES[typeKey];
+    if(sample){
+      const card = document.createElement('div');
+      card.className = 'sample-card';
+      card.innerHTML = `
+        <img src="${sample.thumb}" alt="${label}">
+        <div class="sample-card-footer">
+          <div class="sample-card-label">${label}</div>
+          <button class="sample-dl-btn" title="다운로드"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 1v9M8 10l-3-3M8 10l3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+        </div>`;
+      card.querySelector('.sample-dl-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const a = document.createElement('a');
+        a.href = sample.full;
+        a.download = sample.filename;
+        a.click();
+      });
+      grid.appendChild(card);
+    } else {
+      const empty = document.createElement('div');
+      empty.className = 'sample-empty';
+      empty.innerHTML = `<span>${label}<br><small>준비 중</small></span>`;
+      grid.appendChild(empty);
+    }
+  });
+}
+renderSampleGrid();
+
+// ---- 마스터 샘플 모드 탭 ----
+let soloMode = 'with-sample';
+
+document.querySelectorAll('.mode-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.mode-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    soloMode = tab.dataset.mode;
+    document.getElementById('mode-' + soloMode).classList.add('active');
+    render();
+  });
+});
+
+setupColorGroup('ws');
+setupBgGroup('ws_bg_picker','ws_bg');
+
+function buildWithSample(){
+  const color = document.getElementById('ws_hex').value || '#1D3DF0';
+  const bg = document.getElementById('ws_bg').value || '#FFFFFF';
+  return `Recreate this exact arrow in the same shape, form, angle, and shadow. Change only:\n- color: ${color}\n- background: ${bg}\nKeep everything else identical — same tilt, same band cross-section, same arrowhead shape, same shadow.`;
+}
+
+function render(){
+  const output = document.getElementById('output');
+  const note = document.getElementById('note');
+  if(current === 'solo'){
+    if(soloMode === 'with-sample'){
+      output.textContent = buildWithSample();
+      note.textContent = '마스터 샘플 이미지를 AI 스튜디오에 먼저 업로드한 다음, 이 프롬프트를 이어서 입력하세요.';
+    } else {
+      output.textContent = buildSolo();
+      note.textContent = '마스터 샘플 없이 텍스트만으로 생성할 때 사용합니다. 결과 편차가 생길 수 있어요.';
+    }
+  } else {
+    output.textContent = buildComposite();
+    note.textContent = '기존 오브제 이미지를 먼저 업로드한 다음, 이 프롬프트를 이어서 입력하세요.';
+  }
+}
+
+// hex <-> picker <-> name 동기화 (그룹: s, c)
+function setupColorGroup(prefix){
+  const picker = document.getElementById(prefix+'_picker');
+  const hex = document.getElementById(prefix+'_hex');
+
+  picker.addEventListener('input', ()=>{
+    hex.value = picker.value.toUpperCase();
+    render();
+  });
+
+  hex.addEventListener('input', ()=>{
+    let v = hex.value.trim();
+    if(/^#([0-9A-Fa-f]{6})$/.test(v)){
+      picker.value = v;
+    }
+    render();
+  });
+}
+setupColorGroup('s');
+setupColorGroup('c');
+
+function setupBgGroup(idPicker, idHex){
+  const picker = document.getElementById(idPicker);
+  const hex = document.getElementById(idHex);
+  picker.addEventListener('input', ()=>{
+    hex.value = picker.value.toUpperCase();
+    render();
+  });
+  hex.addEventListener('input', ()=>{
+    let v = hex.value.trim();
+    if(/^#([0-9A-Fa-f]{6})$/.test(v)){
+      picker.value = v;
+    }
+    render();
+  });
+}
+setupBgGroup('s_bg_picker','s_bg');
+setupBgGroup('c_bg_picker','c_bg');
+
+function setupMaterialToggle(selectId, customId){
+  const sel = document.getElementById(selectId);
+  const custom = document.getElementById(customId);
+  sel.addEventListener('change', ()=>{
+    custom.style.display = sel.value === '__custom__' ? 'block' : 'none';
+    render();
+  });
+  custom.addEventListener('input', render);
+}
+setupMaterialToggle('s_material','s_material_custom');
+setupMaterialToggle('c_material','c_material_custom');
+
+
+const MAT_HINTS = {
+  'metallic chrome':     { label:'고광택 메탈',  desc:'거울처럼 반짝이는 금속 질감', tags:['강한 반사','선명한 하이라이트'] },
+  'glossy plastic':      { label:'유광 플라스틱', desc:'매끈하고 컬러가 선명한 질감', tags:['선명한 색감','부드러운 광택'] },
+  'matte ceramic':       { label:'무광 세라믹',  desc:'반사가 적고 차분한 매트 질감', tags:['고급스러움','부드러운 표면'] },
+  'brushed metal':       { label:'결 메탈',      desc:'미세한 결이 살아있는 무광 금속', tags:['섬세한 질감','차분한 광택'] },
+  'frosted glass':       { label:'반투명 유리',  desc:'살짝 비치는 흐린 유리 질감', tags:['투명감','은은한 반사'] },
+  'glossy enamel paint': { label:'유광 에나멜',  desc:'진하고 두툼한 페인트 느낌', tags:['진한 색감','유광 코팅'] },
+};
+
+function updateMatHint(selectId, hintId){
+  const sel = document.getElementById(selectId);
+  const hint = document.getElementById(hintId);
+  if(!sel || !hint) return;
+  const m = MAT_HINTS[sel.value];
+  if(!m){ hint.style.display='none'; return; }
+  hint.style.display='flex';
+  hint.querySelector('.mat-hint-text').innerHTML =
+    '<b>' + m.label + '</b> — ' + m.desc +
+    '<div class="mat-tags">' + m.tags.map(t=>'<span class="mat-tag">'+t+'</span>').join('') + '</div>';
+}
+
+document.getElementById('s_material').addEventListener('change', ()=>{ updateMatHint('s_material','s_mat_hint'); render(); });
+document.getElementById('c_material').addEventListener('change', ()=>{ updateMatHint('c_material','c_mat_hint'); render(); });
+
+
+// ---- 시점 프리셋 (수치 고정) ----
+const VIEW_PRESETS = {
+  'float-front':   'viewed straight-on at eye level, object upright and facing the camera directly. The object is floating in mid-air — NO ground beneath it, NO contact shadow below it. Only a very faint diffuse shadow cast on the background behind the object.',
+  'float-left45':  'viewed from the upper-left at a 45° angle, object tilted like a coin leaning to the left. The object is floating in mid-air — NO ground beneath it, NO contact shadow below it. Only a very faint diffuse shadow cast on the background.',
+  'float-right45': 'viewed from the upper-right at a 45° angle, object tilted like a coin leaning to the right. The object is floating in mid-air — NO ground beneath it, NO contact shadow below it. Only a very faint diffuse shadow cast on the background.',
+  'float-top':     "viewed directly from above (top-down), object floating below the camera, no ground shadow",
+  'ground-front':  'viewed straight-on at eye level, object upright and facing the camera directly, resting on a flat surface with a grounded contact shadow beneath it',
+  'ground-left45': 'viewed from the upper-left at a 45° angle, object tilted like a coin leaning to the left, sitting on a flat ground surface with a soft contact shadow directly beneath it',
+  'ground-right45':'viewed from the upper-right at a 45° angle, object tilted like a coin leaning to the right, sitting on a flat ground surface with a soft contact shadow directly beneath it',
+  'ground-top':    "viewed directly from above (top-down), object lying flat on a ground surface",
+};
+
+const viewSel = {
+  s: { grounded:false, angle:'front' },
+  c: { grounded:false, angle:'front', override:false }
+};
+
+const thicknessSel = { s: '12', c: '12' };
+
+function getViewKey(side){
+  const st = viewSel[side];
+  return `${st.grounded ? 'ground' : 'float'}-${st.angle}`;
+}
+
+function setupGroundSeg(segId, gridId, side){
+  const seg = document.getElementById(segId);
+  const grid = document.getElementById(gridId);
+  if(!seg) return;
+  seg.querySelectorAll('.seg-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      seg.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      viewSel[side].grounded = (btn.dataset.grounded === 'true');
+      grid.classList.toggle('grounded', viewSel[side].grounded);
+      render();
+    });
+  });
+}
+setupGroundSeg('s_ground_seg','s_view_grid','s');
+setupGroundSeg('c_ground_seg','c_view_grid','c');
+
+function setupViewGrid(gridId, side, customInputId){
+  const grid = document.getElementById(gridId);
+  if(!grid) return;
+  const cards = grid.querySelectorAll('.view-card');
+  const customInput = document.getElementById(customInputId);
+  cards.forEach(card=>{
+    card.addEventListener('click', ()=>{
+      cards.forEach(c=>c.classList.remove('selected'));
+      card.classList.add('selected');
+      viewSel[side].angle = card.dataset.value;
+      if(customInput) customInput.style.display = (card.dataset.value === '__custom__') ? 'block' : 'none';
+      render();
+    });
+  });
+  if(customInput) customInput.addEventListener('input', render);
+}
+setupViewGrid('s_view_grid','s','s_view_custom');
+setupViewGrid('c_view_grid','c','c_view_custom');
+
+// 합성 탭: 원본 시점 유지 ↔ 직접 지정 토글
+document.getElementById('c_view_override').addEventListener('click', ()=>{
+  viewSel.c.override = !viewSel.c.override;
+  document.getElementById('c_view_override').classList.toggle('on', viewSel.c.override);
+  const controls = document.getElementById('c_view_controls');
+  controls.style.opacity = viewSel.c.override ? '1' : '.35';
+  controls.style.pointerEvents = viewSel.c.override ? 'auto' : 'none';
+  render();
+});
+
+function setupThicknessSeg(segId, side){
+  const seg = document.getElementById(segId);
+  if(!seg) return;
+  seg.querySelectorAll('.seg-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      seg.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      thicknessSel[side] = btn.dataset.value;
+      render();
+    });
+  });
+}
+setupThicknessSeg('s_thickness_seg','s');
+setupThicknessSeg('c_thickness_seg','c');
+
+document.querySelectorAll('input, select').forEach(el=>{
+  if(el.type === 'color') return; // handled separately
+  el.addEventListener('input', render);
+});
+
+document.getElementById('copyBtn').addEventListener('click', ()=>{
+  const text = document.getElementById('output').textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '복사됨';
+    btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent='복사하기'; btn.classList.remove('copied'); }, 1500);
+  });
+});
+
+render();
+</script>
+</body>
+</html>
